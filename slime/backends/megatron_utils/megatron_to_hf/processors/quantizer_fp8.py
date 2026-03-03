@@ -2,7 +2,7 @@ import re
 
 import torch
 
-from slime.utils.fp8_kernel import blockwise_cast_to_fp8_triton
+from slime.backends.megatron_utils.kernels.fp8_kernel import blockwise_cast_to_fp8_triton
 
 from ...sglang import quant_weight_ue8m0, should_deepgemm_weight_requant_ue8m0, transform_scale_ue8m0
 
@@ -72,6 +72,9 @@ def quantize_params_fp8(args, megatron_name, converted_named_params, quantizatio
         "self_attention.linear_q_up_proj.weight",
         "self_attention.linear_kv_down_proj.weight",
         "self_attention.linear_kv_up_proj.weight",
+        # indexer
+        "self_attention.wq_b.weight",
+        "self_attention.wk.weight",
     ]:
         quantize_named_params = []
         for converted_name, param in converted_named_params:
