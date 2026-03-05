@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# written by wb, 2026-01-14
+# for debug, on single A6000 48G
 
 # for rerun the task
 pkill -9 sglang
@@ -34,20 +34,21 @@ ROLLOUT_ARGS=(
    --apply-chat-template
    --rollout-shuffle
    --rm-type math
-   --num-rollout 100
-   --rollout-batch-size 32
-   --n-samples-per-prompt 8
-   --rollout-max-response-len 1024
+   # 减少rollout数量以降低显存占用
+   --num-rollout 16  # 从100减少到16
+   --rollout-batch-size 8  # 从32减少到8
+   --n-samples-per-prompt 4  # 从8减少到4
+   --rollout-max-response-len 512  # 从1024减少到512
    --rollout-temperature 1
-
-   --global-batch-size 256
+   # 大幅减小global batch size
+   --global-batch-size 32  # 从256减少到32
 )
 
 EVAL_ARGS=(
    --eval-interval 20
    --eval-prompt-data gsm8k /root/gsm8k/test.parquet
    --n-samples-per-eval-prompt 1
-   --eval-max-response-len 1024
+   --eval-max-response-len 512  # 从1024减少到512
    --eval-top-k 1
 )
 
@@ -59,7 +60,7 @@ PERF_ARGS=(
    --expert-model-parallel-size 1
    --expert-tensor-parallel-size 1
    --use-dynamic-batch-size
-   --max-tokens-per-gpu 9216
+   --max-tokens-per-gpu 4096  # 从9216减少到4096
 )
 
 GRPO_ARGS=(
@@ -86,13 +87,13 @@ WANDB_ARGS=(
    --use-wandb
    --wandb-host https://wandb.ai/
    --wandb-team weirdowww
-   --wandb-project slime-dev
-   --wandb-group qwen2.5-0.5B-dapo-math-17k
+   --wandb-project slime-debug
+   --wandb-group qwen2.5-0.5B-gms8k
 )
 
 SGLANG_ARGS=(
    --rollout-num-gpus-per-engine 1
-   --sglang-mem-fraction-static 0.7
+   --sglang-mem-fraction-static 0.4
 
    --sglang-enable-deterministic-inference
    --sglang-attention-backend flashinfer
@@ -112,7 +113,7 @@ MISC_ARGS=(
 )
 
 # launch the master node of ray in container
-ray start --head --node-ip-address 127.0.0.1 --num-gpus 4 --disable-usage-stats --num-cpus 64
+ray start --head --node-ip-address 127.0.0.1 --num-gpus 1 --disable-usage-stats --num-cpus 16
 
 ray job submit --address="http://127.0.0.1:8265" \
    --runtime-env-json='{
@@ -126,7 +127,7 @@ ray job submit --address="http://127.0.0.1:8265" \
    }' \
    -- python3 train.py \
    --actor-num-nodes 1 \
-   --actor-num-gpus-per-node 4 \
+   --actor-num-gpus-per-node 1 \
    --colocate \
    --calculate-per-token-loss \
    --use-slime-router \
