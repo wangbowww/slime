@@ -12,6 +12,14 @@ PS1="\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\\$ "
 EOF
 fi
 
+
+cat <<EOF >> ~/.bashrc
+export NO_PROXY="localhost,127.0.0.1,0.0.0.0,::1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8,172.17.0.2"
+export no_proxy="localhost,127.0.0.1,0.0.0.0,::1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8,172.17.0.2"
+EOF
+
+echo "NO Proxy configured in ~/.bashrc"
+
 echo "配置 Git..."
 git config --global user.email "1562659113@qq.com"
 git config --global user.name "wangbowww"

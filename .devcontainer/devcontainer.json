@@ -18,20 +18,18 @@
     "mounts": [
         "source=/data1/models,target=/root/models,type=bind"
     ],
-    // 对应你的 -e 环境变量 (代理设置)
     "containerEnv": {
         "http_proxy": "http://10.0.0.11:17122",
-        "https_proxy": "http://10.0.0.11:17122"
+        "https_proxy": "http://10.0.0.11:17122",
+        "no_proxy": "localhost,127.0.0.1,0.0.0.0,::1,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8"
     },
-    "remoteUser": "root",
     // 核心提效：自动安装插件，再也不用手动点了
     "customizations": {
         "vscode": {
             "extensions": [
                 "ms-python.python", // Python 支持
                 "ms-python.vscode-pylance", // 代码提示
-                "ms-ceintl.vscode-language-pack-zh-hans", // 中文包
-                "ms-vscode.cpptools" // AI Infra 经常要看 C++
+                "openai.chatgpt-codex" // Codex 代码助手
             ]
         }
     },
