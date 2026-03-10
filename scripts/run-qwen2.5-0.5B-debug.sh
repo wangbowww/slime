@@ -21,11 +21,11 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/models/qwen2.5-0.5B.sh"
 
 CKPT_ARGS=(
-    --hf-checkpoint /root/models/Qwen2.5-0.5B
-    --ref-load /root/MegatronFormatedModel/Qwen2.5-0.5B_torch_dist
-    --load /root/Qwen2.5-0.5B_slime/
-    --save /root/Qwen2.5-0.5B_slime/
-    --save-interval 50
+   --hf-checkpoint /root/models/Qwen2.5-0.5B
+   --ref-load /root/MegatronFormatedModel/Qwen2.5-0.5B_torch_dist
+   --load /root/Qwen2.5-0.5B_slime/
+   --save /root/Qwen2.5-0.5B_slime/
+   --save-interval 50
 )
 ROLLOUT_ARGS=(
    --prompt-data /root/gsm8k/train.parquet
@@ -34,22 +34,18 @@ ROLLOUT_ARGS=(
    --apply-chat-template
    --rollout-shuffle
    --rm-type math
-   # 减少rollout数量以降低显存占用
-   --num-rollout 16  # 从100减少到16
-   --rollout-batch-size 8  # 从32减少到8
-   --n-samples-per-prompt 4  # 从8减少到4
-   --rollout-max-response-len 512  # 从1024减少到512
+   # 单步调试：只跑 1 个 rollout，且每个 rollout 只产生 1 个训练样本
+   --num-rollout 5
+   --rollout-batch-size 2
+   --n-samples-per-prompt 4
+   --rollout-max-response-len 8
    --rollout-temperature 1
-   # 大幅减小global batch size
-   --global-batch-size 32  # 从256减少到32
+   --global-batch-size 1
 )
 
 EVAL_ARGS=(
-   --eval-interval 20
-   --eval-prompt-data gsm8k /root/gsm8k/test.parquet
-   --n-samples-per-eval-prompt 1
-   --eval-max-response-len 512  # 从1024减少到512
-   --eval-top-k 1
+   # 调试训练 step 时跳过 eval，避免先进入 eval 流程
+   --skip-eval-before-train
 )
 
 PERF_ARGS=(
@@ -113,12 +109,13 @@ MISC_ARGS=(
 )
 
 # launch the master node of ray in container
-ray start --head --node-ip-address 127.0.0.1 --num-gpus 1 --disable-usage-stats --num-cpus 16
+ray start --head --node-ip-address 127.0.0.1 --num-gpus 1 --disable-usage-stats --num-cpus 16 --ray-debugger-external
 
 ray job submit --address="http://127.0.0.1:8265" \
    --runtime-env-json='{
      "env_vars": {
         "PYTHONPATH": "/root/Megatron-LM",
+        "RAY_DEBUG": "legacy",
         "CUDA_DEVICE_MAX_CONNECTIONS": "1",
         "NCCL_ALGO": "Ring",
         "NVTE_ALLOW_NONDETERMINISTIC_ALGO": "0",

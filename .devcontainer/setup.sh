@@ -37,6 +37,10 @@ echo "正在下载数据集 aime-2024..."
 hf download --repo-type dataset zhuzilin/aime-2024 \
   --local-dir /root/aime-2024
 
+echo "正在下载数据集 gsm8k..."
+hf download --repo-type dataset zhuzilin/gsm8k \
+  --local-dir /root/gsm8k
+
 echo "正在安装 debugpy..."
 pip install debugpy
 
