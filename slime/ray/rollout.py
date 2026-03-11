@@ -469,6 +469,8 @@ class RolloutManager:
             self.servers: dict[str, RolloutServer] = {}
         else:
             init_http_client(args)
+            # launch SGLang servers, ready for inference
+            # later, we can send http requests to these servers to generate rollout data
             self.servers = start_rollout_servers(args, pg)
         self.rollout_engine_lock = Lock.options(num_cpus=1, num_gpus=0).remote()
         self.rollout_id = -1
@@ -537,6 +539,7 @@ class RolloutManager:
         return len(self.data_source) // self.args.rollout_batch_size
 
     def generate(self, rollout_id):
+        breakpoint()
         start_time = time.time()
         self.rollout_id = rollout_id
         self.health_monitoring_resume()

@@ -16,6 +16,7 @@ set -ex
 
 # will prevent ray from buffering stdout/stderr
 export PYTHONBUFFERED=16
+export RAYDEBUG=1
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}/models/qwen2.5-0.5B.sh"
@@ -47,6 +48,13 @@ EVAL_ARGS=(
    # 调试训练 step 时跳过 eval，避免先进入 eval 流程
    --skip-eval-before-train
 )
+# EVAL_ARGS=(
+#    --eval-interval 20
+#    --eval-prompt-data gsm8k /root/gsm8k/test.parquet
+#    --n-samples-per-eval-prompt 1
+#    --eval-max-response-len 8
+#    --eval-top-k 1
+# )
 
 PERF_ARGS=(
    --tensor-model-parallel-size 1
@@ -79,13 +87,13 @@ OPTIMIZER_ARGS=(
    --adam-beta2 0.98
 )
 
-WANDB_ARGS=(
-   --use-wandb
-   --wandb-host https://wandb.ai/
-   --wandb-team weirdowww
-   --wandb-project slime-debug
-   --wandb-group qwen2.5-0.5B-gms8k
-)
+# WANDB_ARGS=(
+#    --use-wandb
+#    --wandb-host https://wandb.ai/
+#    --wandb-team weirdowww
+#    --wandb-project slime-debug
+#    --wandb-group qwen2.5-0.5B-gms8k
+# )
 
 SGLANG_ARGS=(
    --rollout-num-gpus-per-engine 1
@@ -115,7 +123,6 @@ ray job submit --address="http://127.0.0.1:8265" \
    --runtime-env-json='{
      "env_vars": {
         "PYTHONPATH": "/root/Megatron-LM",
-        "RAY_DEBUG": "legacy",
         "CUDA_DEVICE_MAX_CONNECTIONS": "1",
         "NCCL_ALGO": "Ring",
         "NVTE_ALLOW_NONDETERMINISTIC_ALGO": "0",
@@ -133,7 +140,6 @@ ray job submit --address="http://127.0.0.1:8265" \
    ${ROLLOUT_ARGS[@]} \
    ${OPTIMIZER_ARGS[@]} \
    ${GRPO_ARGS[@]} \
-   ${WANDB_ARGS[@]} \
    ${PERF_ARGS[@]} \
    ${EVAL_ARGS[@]} \
    ${SGLANG_ARGS[@]} \

@@ -40,11 +40,16 @@ def sort_key(x):
 
 def _create_placement_group(num_gpus):
     """Create a placement group with the specified number of GPUs."""
-    bundles = [{"GPU": 1, "CPU": 1} for _ in range(num_gpus)]
-    pg = placement_group(bundles, strategy="PACK")
+    bundles = [{"GPU": 1, "CPU": 1} for _ in range(num_gpus)] # create bundles with 1 GPU and 1 CPU each.
+    pg = placement_group(bundles, strategy="PACK") # use ray api to create pg asynchronously
     num_bundles = len(bundles)
 
-    ray.get(pg.ready())
+    """
+    wait for pg to be ready, 
+    ray will schedule the bundles to the nodes and allocate the resources, 
+    but we don't know which bundle is allocated to which node and gpu until we query it.
+    """
+    ray.get(pg.ready()) 
     # use info actor to get the GPU id
     info_actors = []
     for i in range(num_bundles):
@@ -78,7 +83,10 @@ def _create_placement_group(num_gpus):
 
 def create_placement_groups(args):
     """Create placement groups for actor and rollout engines."""
-
+    """ if colocate, then we need actor_num_nodes * actor_num_gpus_per_node gpus.
+        if we have critic model, 排在actor model的序号后面. rollout_offset is 0.
+        if not colocate, rollout_offset排在最后面, 分配完actor和critic所需要的gpu后, 剩下的都用于rollout
+    """
     num_gpus = 0
     if args.debug_train_only:
         num_gpus = args.actor_num_nodes * args.actor_num_gpus_per_node
@@ -111,7 +119,16 @@ def create_placement_groups(args):
     if args.use_critic:
         critic_pg_reordered_bundle_indices = actor_pg_reordered_bundle_indices[critic_offset:]
         critic_pg_reordered_gpu_ids = actor_pg_reordered_gpu_ids[critic_offset:]
-
+    """
+    example:
+    assume we have for bundles:
+    (0, 10.0.0.2, 1), (1, 10.0.0.1, 3), (2, 10.0.0.1, 0), (3, 10.0.0.2, 0)
+    then we sort, we get:
+    (2, 10.0.0.1, 0), (1, 10.0.0.1, 3), (3, 10.0.0.2, 0), (0, 10.0.0.2, 1)
+    then we fetch first and third element:
+    bundle_indices: (2, 1, 3, 0)
+    gpu_ids: (0, 3, 0, 1)
+    """
     return {
         "actor": (pg, actor_pg_reordered_bundle_indices, actor_pg_reordered_gpu_ids),
         "critic": (pg, critic_pg_reordered_bundle_indices, critic_pg_reordered_gpu_ids) if args.use_critic else None,
@@ -179,6 +196,8 @@ def create_training_models(args, pgs, rollout_manager):
 
 
 def create_rollout_manager(args, pg):
+    # start rollout manager
+    # including: data source, router, sglang engines, etc.
     rollout_manager = RolloutManager.options(
         num_cpus=1,
         num_gpus=0,
@@ -187,6 +206,7 @@ def create_rollout_manager(args, pg):
     # calculate num_rollout from num_epoch
     num_rollout_per_epoch = None
     if args.num_rollout is None:
+        # len(dataset) // rollout_batch_size
         num_rollout_per_epoch = ray.get(rollout_manager.get_num_rollout_per_epoch.remote())
         args.num_rollout = num_rollout_per_epoch * args.num_epoch
         assert args.num_rollout > 0
