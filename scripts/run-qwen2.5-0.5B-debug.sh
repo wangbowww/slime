@@ -116,6 +116,7 @@ MISC_ARGS=(
    --attention-backend flash
 )
 
+export CUDA_VISIBLE_DEVICES=3
 # launch the master node of ray in container
 ray start --head --node-ip-address 127.0.0.1 --num-gpus 1 --disable-usage-stats --num-cpus 16 --ray-debugger-external
 
